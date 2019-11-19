@@ -3,12 +3,112 @@
  */
 package GameOfLife;
 
-public class App {
-    public String getGreeting() {
-        return "Hello world.";
-    }
+import javafx.animation.AnimationTimer;
+import javafx.application.Application;
+import javafx.scene.Group;
+import javafx.scene.Scene;
+import javafx.scene.canvas.Canvas;
+import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.input.KeyEvent;
+import javafx.scene.input.MouseEvent;
+import javafx.scene.paint.Color;
+import javafx.stage.Stage;
+
+public class App extends Application {
+
+    Canvas canvas;
+    GameOfLife gameOfLife;
+    boolean paused = true;
+    boolean drawGrid = true;
+    int width = 640;
+    int height = 480;
+    int cellSize = 10;
 
     public static void main(String[] args) {
-        System.out.println(new App().getGreeting());
+        Application.launch(args);
+    }
+
+    @Override
+    public void start(Stage stage) throws Exception {
+        gameOfLife = new GameOfLife(width / cellSize, height / cellSize);
+
+        canvas = new Canvas(width, height);
+        canvas.setOnKeyPressed(this::controlKeyboard);
+        canvas.setOnMouseClicked(this::controlMouse);
+        draw(canvas.getGraphicsContext2D());
+
+        AnimationTimer animationTimer = new AnimationTimer() {
+            @Override
+            public void handle(long l) {
+                // update
+                if (!paused) {
+                    gameOfLife.step();
+                }
+
+                // draw
+                draw(canvas.getGraphicsContext2D());
+            }
+        };
+
+        animationTimer.start();
+
+        stage.setTitle("Game Of Life");
+        stage.setScene(new Scene(new Group(canvas)));
+        stage.show();
+        canvas.requestFocus();
+    }
+
+    public void draw(GraphicsContext context) {
+        gameOfLife.draw(context, 10);
+        if (drawGrid) {
+            drawGrid(context);
+        }
+        if (paused) {
+            context.setStroke(Color.RED);
+            context.setFill(Color.RED);
+            context.fillRect(25, 20, 4, 9);
+            context.fillRect(35, 20, 4, 9);
+        }
+    }
+
+    public void drawGrid(GraphicsContext context) {
+        context.setStroke(Color.BLACK);
+
+        // vertical lines
+        for (int i = 0; i <= width; i += cellSize) {
+            context.strokeLine(i, 0, i, height);
+        }
+
+        // horizontal lines
+        for (int i = 0; i <= height; i += cellSize) {
+            context.strokeLine(0, i, width, i);
+        }
+    }
+
+    private void controlKeyboard(KeyEvent event) {
+        switch (event.getCode()) {
+            case SPACE:
+                paused = !paused;
+                System.out.println(paused);
+                break;
+            case G:
+                drawGrid = !drawGrid;
+                break;
+            case C:
+                gameOfLife.clear();
+                break;
+            case Q:
+            case ESCAPE:
+                System.exit(0);
+            default:
+                break;
+        }
+        event.consume();
+    }
+
+    private void controlMouse(MouseEvent event) {
+        int x = (int) event.getSceneX() / cellSize;
+        int y = (int) event.getSceneY() / cellSize;
+        gameOfLife.flip(x, y);
     }
 }
